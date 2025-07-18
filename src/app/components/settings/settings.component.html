@@ -1,0 +1,47 @@
+<div class="settings-container">
+  <h2>LLM Discussions</h2>
+  
+  <div class="connection">
+    <span>Ollama Status:</span>
+    @if(connectionStatus() === 'connected'){
+      <span class="status-badge connected">Connected ✅</span>
+    } @else if(connectionStatus() === 'disconnected'){
+      <span class="status-badge disconnected">Disconnected ❌</span>
+    } @else {
+      <span class="status-badge pending">Checking...</span>
+    }
+  </div>
+
+  <div class="form-group">
+    <label for="topic">Discussion Topic:</label>
+    <input id="topic" type="text" [(ngModel)]="topic" placeholder="e.g., The future of AI">
+  </div>
+
+  <div class="flex layout-row form-group">
+    <label>Conversation Rounds</label>
+  
+    <span class="rounds-value">{{rounds}} rounds</span>
+</div>
+
+  <div class="model-selectors">
+    <div class="form-group">
+      <label for="model1">Model 1</label>
+      <select id="model1" [(ngModel)]="model1">
+        @for(model of models(); track model.id){
+          <option [value]="model.id">{{ model.id }}</option>
+        }
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="model2">Model 2</label>
+      <select id="model2" [(ngModel)]="model2">
+        @for(model of models(); track model.id){
+          <option [value]="model.id">{{ model.id }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  
+  <button (click)="startDiscussion()" [disabled]="!isFormValid()">Start Discussion</button>
+  <p class="error-msg">{{ validationError() }}</p>
+</div>
