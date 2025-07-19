@@ -2,6 +2,7 @@ import { Component, Input, OnInit, ElementRef, ViewChild, AfterViewChecked, sign
 import { CommonModule } from '@angular/common';
 import { OllamaService, OllamaGenerateResponse } from '../../services/ollama.service';
 import { DiscussionConfig } from '../settings/settings.component';
+import { MarkdownModule } from 'ngx-markdown';
 
 
 export interface Message {
@@ -11,6 +12,7 @@ export interface Message {
   isThinking: boolean;
   isReasoningModel?: boolean;
   thoughtProcess?: string;
+  contextSize?: number; // Add this line
 }
 
 // Add this interface near your other interfaces
@@ -22,7 +24,7 @@ interface ConversationStylePrompt {
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MarkdownModule],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css']
 })
@@ -37,12 +39,12 @@ export class ChatComponent implements OnInit, AfterViewChecked {
 // Add this as a class property
 private conversationStyles: ConversationStylePrompt[] = [
   {
-    style: 'default',
+    style: 'formal',
     systemPrompt: 'Engage in a natural, balanced discussion while being concise and clear.'
   },
   {
     style: 'debate',
-    systemPrompt: 'Engage in a formal debate style, presenting clear arguments and counterarguments while maintaining respect.'
+    systemPrompt: 'Engage in a formal debate style, presenting clear arguments and counterarguments'
   },
   {
     style: 'analytical',
@@ -78,7 +80,7 @@ private conversationStyles: ConversationStylePrompt[] = [
   private scrollToBottom(): void {
     try {
       const element = this.messageListContainer.nativeElement;
-      const threshold = 50; // Adjust this value as needed
+      const threshold = 70; // Adjust this value as needed
       const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
 
       if (distanceToBottom <= threshold) {
@@ -87,7 +89,7 @@ private conversationStyles: ConversationStylePrompt[] = [
     } catch (err) { }
   }
   async startConversation() {
-    this.stopGeneration = false;
+    // this.stopGeneration = false;
     this.isGenerating.set(true);
 
     let currentModelName = this.config.model1;
@@ -97,15 +99,14 @@ private conversationStyles: ConversationStylePrompt[] = [
     const stylePrompt = this.conversationStyles.find(s => s.style === this.config.conversationStyle)?.systemPrompt || 
                        this.conversationStyles[0].systemPrompt;
 
-    let currentPrompt = `${stylePrompt} Start a discussion about the following topic: "${this.config.topic}". Please provide a concise opening statement.`;
+    let currentPrompt = `${stylePrompt} Start a discussion about the following topic: "${this.config.topic}". Please provide an opening statement.`;
 
-    console.log("🚀 ~ ChatComponent ~ startConversation ~ currentPrompt:", currentPrompt)
     for (let i = 0; i < this.config.rounds && !this.stopGeneration; i++) {
       const response = await this.generateResponse(currentModelName, currentPrompt);
-      if (!response || this.stopGeneration) break;
+      if (this.stopGeneration) break;
 
-      currentPrompt = `${stylePrompt} You are ${otherModelName}. Your partner in this discussion, ${currentModelName}, said: "${response}". Please respond directly to their statement, keeping the conversation going. Be concise.`;
-
+      currentPrompt = `${stylePrompt} You are ${otherModelName}. Your partner in this discussion, ${currentModelName}, said: "${response}". Please respond directly to their statement, keeping the conversation going.`;
+      console.log(`Round ${i + 1}: ${currentPrompt}"`);
       // Swap models for the next turn
       [currentModelName, otherModelName] = [otherModelName, currentModelName];
     }
@@ -113,7 +114,17 @@ private conversationStyles: ConversationStylePrompt[] = [
 }
 
 
-  // Update the relevant part of generateResponse where the response is processed
+  private processReasoningResponse(response: string): { content: string, thoughtProcess?: string } {
+    const thinkMatch = response.match(/<think>(.*?)<\/think>/s);
+    const thoughtProcess = thinkMatch ? thinkMatch[1].trim() : undefined;
+    const cleanContent = response.replace(/<think>.*?<\/think>/s, '').trim();
+
+    return {
+      content: cleanContent,
+      thoughtProcess: thoughtProcess
+    };
+  }
+
   generateResponse(model: string, prompt: string): Promise<string | null> {
     return new Promise((resolve, reject) => {
       let isReasoningModel = false
@@ -121,32 +132,57 @@ private conversationStyles: ConversationStylePrompt[] = [
         author: model,
         content: '',
         isThinking: true,
-        isReasoningModel
+        isReasoningModel,
+        contextSize: 0
       };
       this.messages.update(msgs => [...msgs, thinkingMessage]);
 
       let fullResponse = '';
       let displayedResponse = '';
+      let displayedThoughtProcess = ''; // To hold the displayed thought process
       const context = this.conversationContext[model] || [];
 
       this.ollama.generate(model, prompt, context).subscribe({
         next: (chunk: OllamaGenerateResponse) => {
           if (this.stopGeneration) return;
-
-          if(chunk.response.includes('<think>')){
-            isReasoningModel = true;
-            thinkingMessage.isReasoningModel = true;
-          }
+          
           fullResponse += chunk.response;
 
           if (chunk.done) {
+
             this.conversationContext[model] = chunk.context || [];
             let charIndex = 0;
-
+            let thoughtProcessCharIndex = 0; // Index for typing the thought process
+               if(/<think>/i.test(fullResponse)){
+                isReasoningModel = true;
+                thinkingMessage.isReasoningModel = true;
+              }
             // Process reasoning model response if applicable
             const processedResponse = isReasoningModel
               ? this.processReasoningResponse(fullResponse)
               : { content: fullResponse };
+
+            // Function to type out the thought process
+            const typeThoughtProcess = () => {
+              if (this.stopGeneration) {
+                displayedThoughtProcess = processedResponse.thoughtProcess || '';
+                return;
+              }
+
+              if (processedResponse.thoughtProcess && thoughtProcessCharIndex < processedResponse.thoughtProcess.length) {
+                displayedThoughtProcess += processedResponse.thoughtProcess[thoughtProcessCharIndex];
+                this.messages.update(msgs => {
+                  const updatedMsgs = [...msgs];
+                  updatedMsgs[updatedMsgs.length - 1].thoughtProcess = displayedThoughtProcess;
+                  return updatedMsgs;
+                });
+                thoughtProcessCharIndex++;
+                setTimeout(typeThoughtProcess, 5);
+              } else {
+                // After typing the thought process, start typing the content
+                typeText();
+              }
+            };
 
             const typeText = () => {
               if (this.stopGeneration) {
@@ -157,39 +193,32 @@ private conversationStyles: ConversationStylePrompt[] = [
               if (charIndex < processedResponse.content.length) {
                 displayedResponse += processedResponse.content[charIndex];
                 this.messages.update(msgs => {
-                  msgs[msgs.length - 1].content = displayedResponse;
-                  msgs[msgs.length - 1].thoughtProcess = processedResponse.thoughtProcess;
-                  return [...msgs];
+                  const updatedMsgs = [...msgs];
+                  updatedMsgs[updatedMsgs.length - 1].content = displayedResponse;
+                  updatedMsgs[updatedMsgs.length - 1].contextSize = chunk.context?.length;
+                  return updatedMsgs;
                 });
                 charIndex++;
-                setTimeout(typeText, 15);
+                setTimeout(typeText, 5);
               } else {
                 this.messages.update(msgs => {
-                  msgs[msgs.length - 1].isThinking = false;
-                  return [...msgs];
+                  const updatedMsgs = [...msgs];
+                  updatedMsgs[updatedMsgs.length - 1].isThinking = false;
+                   return updatedMsgs;
                 });
                 resolve(processedResponse.content); // Pass only the clean content to the next model
               }
             };
 
-            typeText();
+            if (isReasoningModel && processedResponse.thoughtProcess) {
+              typeThoughtProcess(); // Start typing the thought process first
+            } else {
+              typeText(); // If no thought process, type the content directly
+            }
           }
         },
-        // ...existing error handling...
       });
     });
-  }
-
-  // Add this method to the ChatComponent class
-  private processReasoningResponse(response: string): { content: string, thoughtProcess?: string } {
-    const thinkMatch = response.match(/<think>(.*?)<\/think>/s);
-    const thoughtProcess = thinkMatch ? thinkMatch[1].trim() : undefined;
-    const cleanContent = response.replace(/<think>.*?<\/think>/s, '').trim();
-
-    return {
-      content: cleanContent,
-      thoughtProcess: thoughtProcess
-    };
   }
 
 

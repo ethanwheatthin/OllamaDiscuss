@@ -1,5 +1,8 @@
 <div class="chat-container">
-  <h2>Discussion: {{ config.topic }}</h2>
+  <div class="header flex layout-column layout-align-space-evenly-center">
+  <h2>Topic: {{ config.topic }}</h2>
+  <button (click)="stopDiscussion()">Stop Generation</button>
+  </div>
   <div class="flex layout-column message-list" #messageList>
     @for(msg of messages(); track $index) {
       <div class="message" [class.model-1]="msg.author === config.model1" [class.model-2]="msg.author === config.model2">
@@ -13,13 +16,17 @@
               </div>
             </details>
           }
-          <p>{{ msg.content }}</p>
+        
+          <p  [innerHTML]="msg.content | markdown | async"></p> 
+         
           @if(msg.isThinking) {
             <div class="thinking-indicator"></div>
+          }
+          @if (msg.contextSize) {
+            <div class="context-size">Context Size: {{ msg.contextSize }}</div>
           }
         </div>
       </div>
     }
   </div>
-  <button (click)="stopDiscussion()">Stop Generation</button>
 </div>

@@ -14,7 +14,10 @@
 
   <div class="form-group">
     <label for="topic">Discussion Topic:</label>
+    <div class="flex layout-row">
     <input id="topic" type="text" [(ngModel)]="topic" placeholder="e.g., The future of AI">
+    <button (click)="randomTopic()">Random</button>
+    </div>
   </div>
 
   <div class="flex layout-row form-group">
@@ -30,7 +33,7 @@
   <div class="flex layout-column form-group">
     Conversation style: {{conversationStyle.toUpperCase()}}
     <div class="flex layout-row layout-wrap">
-      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'default'}" (click)="this.conversationStyle = 'default'">Default</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'formal'}" (click)="this.conversationStyle = 'formal'">Formal</button>
       <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'debate'}" (click)="this.conversationStyle = 'debate'">Debate</button>
       <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'analytical'}" (click)="this.conversationStyle = 'analytical'">Analytical</button>
       <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'creative'}" (click)="this.conversationStyle = 'creative'">Creative</button>
