@@ -1,14 +1,14 @@
 <div class="settings-container">
   <h2>LLM Discussions</h2>
-  
+
   <div class="connection">
     <span>Ollama Status:</span>
     @if(connectionStatus() === 'connected'){
-      <span class="status-badge connected">Connected ✅</span>
+    <span class="status-badge connected">Connected ✅</span>
     } @else if(connectionStatus() === 'disconnected'){
-      <span class="status-badge disconnected">Disconnected ❌</span>
+    <span class="status-badge disconnected">Disconnected ❌</span>
     } @else {
-      <span class="status-badge pending">Checking...</span>
+    <span class="status-badge pending">Checking...</span>
     }
   </div>
 
@@ -18,17 +18,34 @@
   </div>
 
   <div class="flex layout-row form-group">
-    <label>Conversation Rounds</label>
-  
-    <span class="rounds-value">{{rounds}} rounds</span>
-</div>
+    <div class="flex layout-column">
+      <label for="rounds">Conversation Rounds: {{this.rounds}}</label>
+      <div class="flex layout-row ">
+        <button class="rounds" (click)="decrementRounds()">-</button>
+        <button class="rounds" (click)="incrementRounds()">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex layout-column form-group">
+    Conversation style: {{conversationStyle.toUpperCase()}}
+    <div class="flex layout-row layout-wrap">
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'default'}" (click)="this.conversationStyle = 'default'">Default</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'debate'}" (click)="this.conversationStyle = 'debate'">Debate</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'analytical'}" (click)="this.conversationStyle = 'analytical'">Analytical</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'creative'}" (click)="this.conversationStyle = 'creative'">Creative</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'socratic'}" (click)="this.conversationStyle = 'socratic'">Socratic</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'adversarial'}" (click)="this.conversationStyle = 'adversarial'">Adversarial</button>
+      <button class="flex layout-align-center-center" [ngClass]="{'active': this.conversationStyle == 'storytelling'}" (click)="this.conversationStyle = 'storytelling'">Storytelling</button>
+    </div>
+  </div>
 
   <div class="model-selectors">
     <div class="form-group">
       <label for="model1">Model 1</label>
       <select id="model1" [(ngModel)]="model1">
         @for(model of models(); track model.id){
-          <option [value]="model.id">{{ model.id }}</option>
+        <option [value]="model.id">{{ model.id }}</option>
         }
       </select>
     </div>
@@ -36,12 +53,12 @@
       <label for="model2">Model 2</label>
       <select id="model2" [(ngModel)]="model2">
         @for(model of models(); track model.id){
-          <option [value]="model.id">{{ model.id }}</option>
+        <option [value]="model.id">{{ model.id }}</option>
         }
       </select>
     </div>
   </div>
-  
+
   <button (click)="startDiscussion()" [disabled]="!isFormValid()">Start Discussion</button>
   <p class="error-msg">{{ validationError() }}</p>
 </div>

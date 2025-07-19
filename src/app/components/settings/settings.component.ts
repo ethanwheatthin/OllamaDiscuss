@@ -5,13 +5,14 @@ import {
   OllamaService,
   OllamaModel,
 } from '../../services/ollama.service';
-import {MatSliderModule} from '@angular/material/slider';
 
 // Interface for the data emitted when starting a discussion
 export interface DiscussionConfig {
   topic: string;
   model1: string;
   model2: string;
+  conversationStyle: string;
+  rounds: number; // Number of conversation rounds
 }
 
 @Component({
@@ -32,7 +33,7 @@ export class SettingsComponent implements OnInit {
   model1: string = '';
   model2: string = '';
   rounds: number = 10; // Default value
-
+  conversationStyle: string = 'formal'; // Default value
   constructor(private ollama: OllamaService) {}
   
   ngOnInit() {
@@ -63,6 +64,14 @@ export class SettingsComponent implements OnInit {
     return this.connectionStatus() === 'connected';
   }
 
+  decrementRounds(){
+    this.rounds -= 1;
+  }
+
+  incrementRounds(){
+    this.rounds += 1;
+  }
+
   startDiscussion() {
     if (this.model1 === this.model2) {
       this.validationError.set('Please select two different models.');
@@ -77,6 +86,8 @@ export class SettingsComponent implements OnInit {
       topic: this.topic,
       model1: this.model1,
       model2: this.model2,
+      conversationStyle: this.conversationStyle,
+      rounds: this.rounds 
     });
   }
 }

@@ -1,10 +1,18 @@
 <div class="chat-container">
   <h2>Discussion: {{ config.topic }}</h2>
-  <div class="message-list" #messageList>
+  <div class="flex layout-column message-list" #messageList>
     @for(msg of messages(); track $index) {
       <div class="message" [class.model-1]="msg.author === config.model1" [class.model-2]="msg.author === config.model2">
         <div class="author">{{ msg.author }}</div>
         <div class="content">
+          @if (msg.thoughtProcess) {
+            <details class="thought-process">
+              <summary>View Reasoning</summary>
+              <div class="thought-content">
+                {{msg.thoughtProcess}}
+              </div>
+            </details>
+          }
           <p>{{ msg.content }}</p>
           @if(msg.isThinking) {
             <div class="thinking-indicator"></div>
